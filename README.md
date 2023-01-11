@@ -12,16 +12,62 @@
 ![BI_Vessel_Pipeline](https://user-images.githubusercontent.com/39410838/211897634-10b06248-17e7-464d-a0b4-1b648ce170f9.jpg)
 
 
-# Pipelines
+# Pipelines Services:
 
-1. ECS Task
-  1.1 Task Trigger = Every 15 min via AWS Eventbridge event
-  1.2 Task Definition = To be setup in AWS ECS service
-  1.3 Container = A Python Docker based container with a requirements.txt libraries list:
-      - boto3
-      - awswrangler
-      - json
-      - requests
-      - confluent-kafka
-      - pandas
-      
+**AWS S3 bucket**
+- Create 3 buckets for landing files:
+    - vessel-information
+    - vessel-performance
+    - vessel-position-weather
+
+**AWS ECR Repository**
+- Create a Repository to store the Python Docker container
+
+**AWS ECS Task**
+- Task Trigger = Every 15 min, to be created in AWS Eventbridge
+- Task Definition = To be created in AWS ECS
+- ECR Docker Container = A Python Docker based docker container stored in AWS ECR Repository
+    **with a requirements.txt libraries list:**
+    - boto3
+    - awswrangler
+    - json
+    - requests
+    - confluent-kafka
+    - pandas
+ - Python Steps:
+    - Connect to the Apache Kafka topic based on the broker bootstrap hosts
+    - Use the method Consumer to read messages ofsets
+    - For each message received, send an API request to the OpenWeatherMap.org URL sending the message latitude, longitude and datetime
+          - Append the returned json payload to the message payload into a Pandas Dataframe
+          - Append each message to a final Pandas Dataframe
+    - Write the final Pandas dataframe to a AWS S3 bucket (e.g.: vessel-position-weather) in parquet format, partitioned by Vessel ID and position timestamp
+
+**AWS DMS Task**
+The Database Migration Service is a service which helps to bring On-Premise database tables to the AWS
+For this purpose, the DMS we would need to setup:
+- A Replication Instance
+- A source Endpoint:
+    - 1. Vessel Information source database (host/port/user/password)
+    - 2. Vessel Performance source database (host/port/user/password)
+- A target Endpoint:
+    - 1. Vessel Information target S3 bucket (e.g: vessel-information)
+    - 2. Vessel Performance target S3 bucket (e.g: vessel-performance)
+- A migration task:
+    - 1. Vessel Information from Source to Target Endpoint and mode (Full Load + CDC)
+    - 2. Vessel Performance  from Source to Target Endpoint and mode (Full Load + CDC)
+
+**AWS Glue Data Catalog**
+The AWS Glue data catalog is a service which runs a crawler in the S3 bucket and map new/changes on partitions and reference the other services such as AWS Athena the right table schema
+- Create 3 Glue crawlers
+    - vessel-information (daily)
+    - vessel-performance (hourly)
+    - vessel-position-weather (every 15 minutes)
+
+**AWS Athena**
+- Creates a Database and Tables based on the Glue Data Catalog using a Presto like SQL layer of abstraction.
+
+**AWS Quicksight**
+- Creates Dashboards/Reports on top of Athena Datasets imported to it
+
+**AWS Sagemaker**
+- Creates a Connection of ML Notebooks (Jupyter) on top of AWS Athena database, to inference data from the tables
