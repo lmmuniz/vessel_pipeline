@@ -43,6 +43,7 @@
     - Write the final Pandas dataframe to a AWS S3 bucket (e.g.: vessel-position-weather) in parquet format, partitioned by Vessel ID and position timestamp
 
 **AWS DMS Task**
+
 The Database Migration Service is a service which helps to bring On-Premise database tables to the AWS
 For this purpose, the DMS we would need to setup:
 - A Replication Instance
@@ -57,6 +58,7 @@ For this purpose, the DMS we would need to setup:
     - 2. Vessel Performance  from Source to Target Endpoint and mode (Full Load + CDC)
 
 **AWS Glue Data Catalog**
+
 The AWS Glue data catalog is a service which runs a crawler in the S3 bucket and map new/changes on partitions and reference the other services such as AWS Athena the right table schema
 - Create 3 Glue crawlers
     - vessel-information (daily)
